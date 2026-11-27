@@ -108,7 +108,7 @@ a { color: inherit; }
 .bigline { font: 800 1.35rem/1.25 var(--font-d); }
 .t { overflow-wrap: anywhere; }
 
-input[type="text"] { width: 100%; min-height: 50px; padding: 10px 14px; border: 3px solid var(--ink); border-radius: 14px; background: var(--card); color: var(--ink); font: 600 1rem var(--font-b); }
+input[type="text"], input[type="password"] { width: 100%; min-height: 50px; padding: 10px 14px; border: 3px solid var(--ink); border-radius: 14px; background: var(--card); color: var(--ink); font: 600 1rem var(--font-b); }
 input[type="text"]::placeholder { color: var(--muted); opacity: 1; }
 .btn { min-height: 50px; padding: 10px 20px; border: 3px solid var(--ink); border-radius: 14px; background: var(--accent); color: var(--accent-ink); font: 800 1rem var(--font-d); cursor: pointer; box-shadow: 4px 4px 0 var(--sh); transition: transform .1s, box-shadow .1s; }
 .btn:active { transform: translate(3px,3px); box-shadow: 1px 1px 0 var(--sh); }
@@ -532,6 +532,7 @@ input[type="text"]::placeholder { color: var(--muted); opacity: 1; }
     </div>
   </div>
   <p class="ed-note">Change any title, button name or placeholder. Edits show right away and are saved in this browser. Press Download page on your live site to get a file with your text built in.</p>
+  <div class="ed-note"><label class="field" for="edPass"><small>Edit password (needed to save for everyone)</small><input type="password" id="edPass" autocomplete="current-password"></label></div>
   <p class="ed-note" id="edMsg" hidden></p>
   <div class="ed-body" id="edBody"></div>
 </aside>
@@ -544,7 +545,21 @@ input[type="text"]::placeholder { color: var(--muted); opacity: 1; }
   var defaults = {}, meta = {}, order = [];
   var store = {};
   try { store = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { store = {}; }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
+  /* Cloudflare D1: shared edits live at /api/edits (see functions/api/edits.js). */
+  var API = '/api/edits', pushTimer = null;
+  function pass() { var p = document.getElementById('edPass'); return p ? p.value : ''; }
+  function status(t) { var m = document.getElementById('edMsg'); if (m) { m.textContent = t; m.hidden = false; } }
+  function push() {
+    fetch(API, { method: 'PUT', headers: { 'content-type': 'application/json', 'x-edit-password': pass() }, body: JSON.stringify(store) })
+      .then(function (r) {
+        status(r.ok ? 'Saved to the database for everyone.' : r.status === 401 ? 'Wrong or missing password. Saved in this browser only.' : 'Database error. Saved in this browser only.');
+      })
+      .catch(function () { status('Could not reach the database. Saved in this browser only.'); });
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+    clearTimeout(pushTimer); pushTimer = setTimeout(push, 600);
+  }
   var PRESET = window.PRESET || {};
   function get(k) { return (k in store && store[k] !== '') ? store[k] : (k in PRESET ? PRESET[k] : defaults[k]); }
   function kindOf(el) {
@@ -1027,6 +1042,26 @@ input[type="text"]::placeholder { color: var(--muted); opacity: 1; }
 
   apply();
   route();
+
+  /* Password: remembered for this tab only. Typing it re-sends the current text. */
+  var passEl = $('#edPass');
+  try { passEl.value = sessionStorage.getItem('fr-ch2-pass') || ''; } catch (e) {}
+  passEl.addEventListener('change', function () {
+    try { sessionStorage.setItem('fr-ch2-pass', passEl.value); } catch (e) {}
+    push();
+  });
+
+  /* Load the shared text from the database; it replaces this browser's copy. */
+  fetch(API, { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('x'); return r.json(); })
+    .then(function (remote) {
+      if (!remote || typeof remote !== 'object' || !Object.keys(remote).length) return;
+      store = remote;
+      try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+      apply();
+      if (!ed.hidden) openEditor();
+    })
+    .catch(function () {});
 })();
 </script>
 
