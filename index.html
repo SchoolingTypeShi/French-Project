@@ -155,7 +155,7 @@ input[type="text"]::placeholder { color: var(--muted); opacity: 1; }
 .dot { width: 22px; height: 22px; padding: 0; border-radius: 50%; border: 3px solid var(--ink); cursor: pointer; transition: transform .12s; }
 .dot:hover { transform: scale(1.2); }
 .dot.on { outline: 4px solid var(--accent); outline-offset: 2px; }
-.feedback { margin-top: 14px; font: 800 1.1rem var(--font-d); }
+.colword { text-align: center; font: 800 clamp(1.8rem, 7vw, 2.8rem)/1.15 var(--font-d); }
 
 /* Opposites */
 .pair { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 22px; }
@@ -398,7 +398,7 @@ input[type="text"]::placeholder { color: var(--muted); opacity: 1; }
       <header class="page-head">
         <div>
           <h2 data-k="col.title">Placeholder: colors page title</h2>
-          <p class="lede" data-k="col.help">Placeholder: instruction for the color slider</p>
+          <p class="lede" data-k="col.help">Placeholder: short intro for the colors page</p>
         </div>
         <svg class="art" viewBox="0 0 100 100" aria-hidden="true"><use href="#i-col"/></svg>
       </header>
@@ -406,12 +406,7 @@ input[type="text"]::placeholder { color: var(--muted); opacity: 1; }
         <div class="swatch" id="swatch"></div>
         <input type="range" id="colSlider" min="0" max="10" step="1" value="0">
         <div class="dots" id="dots"></div>
-        <div class="row">
-          <input type="text" id="colIn" data-ph="col.ph" placeholder="Placeholder: type the color in French" autocomplete="off">
-          <button class="btn" type="button" id="colCheck" data-k="col.check">Placeholder: check button</button>
-        </div>
-        <p class="feedback" id="colOk" data-k="col.ok" hidden>Placeholder: correct message</p>
-        <p class="feedback" id="colBad" data-k="col.bad" hidden>Placeholder: try again message</p>
+        <p class="colword t" id="colFr"></p>
       </div>
       <section class="english">
         <h3 data-k="col.en.title">Placeholder: English section title</h3>
@@ -574,8 +569,8 @@ input[type="text"]::placeholder { color: var(--muted); opacity: 1; }
   reg('time.en.tpl', 'Time page · sentence', 'English sentence (the clock fills in {h})', "It is {h} o'clock");
   var COLORS = [['red', '#e53935'], ['orange', '#fb8c00'], ['yellow', '#fdd835'], ['green', '#43a047'], ['blue', '#1e88e5'], ['purple', '#8e24aa'], ['pink', '#f48fb1'], ['brown', '#795548'], ['black', '#111111'], ['gray', '#9e9e9e'], ['white', '#ffffff']];
   COLORS.forEach(function (c) {
-    reg('colors.fr.' + c[0], 'Colors page · answers', 'French answer, ' + c[0], 'Placeholder: French for ' + c[0]);
-    reg('colors.en.' + c[0], 'Colors page · answers', 'English name, ' + c[0], 'Placeholder: English for ' + c[0]);
+    reg('colors.fr.' + c[0], 'Colors page · words', 'French word, ' + c[0], 'Placeholder: French for ' + c[0]);
+    reg('colors.en.' + c[0], 'Colors page · words', 'English name, ' + c[0], 'Placeholder: English for ' + c[0]);
   });
   var D = '#2b2b2b';
   var EMO = [
@@ -684,23 +679,15 @@ input[type="text"]::placeholder { color: var(--muted); opacity: 1; }
   function renderColor() {
     var v = +slider.value, c = COLORS[v];
     $('#swatch').style.background = c[1];
+    $('#colFr').textContent = get('colors.fr.' + c[0]);
     $('#colEn').textContent = get('colors.en.' + c[0]);
     $$('.dot').forEach(function (d, idx) {
       d.classList.toggle('on', idx === v);
       d.setAttribute('aria-label', get('colors.en.' + COLORS[idx][0]));
     });
   }
-  function onSlide() {
-    $('#colIn').value = ''; $('#colOk').hidden = true; $('#colBad').hidden = true; renderColor();
-  }
+  function onSlide() { renderColor(); }
   slider.addEventListener('input', onSlide);
-  function checkColor() {
-    var id = COLORS[+slider.value][0];
-    var ok = $('#colIn').value.trim().toLowerCase() === String(get('colors.fr.' + id)).trim().toLowerCase();
-    $('#colOk').hidden = !ok; $('#colBad').hidden = ok;
-  }
-  $('#colCheck').addEventListener('click', checkColor);
-  $('#colIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') checkColor(); });
 
   /* ---------- Opposites ---------- */
   var busy = false;
